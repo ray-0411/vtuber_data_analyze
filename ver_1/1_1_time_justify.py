@@ -25,7 +25,13 @@ def main():
     if not SRC_DB.exists():
         raise FileNotFoundError(f"找不到來源資料庫：{SRC_DB}")
 
+    if DST_DB.exists():
+        DST_DB.unlink()   # 直接刪掉舊檔
+        print(f"⚠️ 已刪除舊的 {DST_DB.name}")
+
+    # 1️⃣ 複製 DB
     shutil.copyfile(SRC_DB, DST_DB)
+    print("✅ 已建立 data_1_1.db（準備去重複）")
     
     conn = sqlite3.connect(DST_DB)
     cur = conn.cursor()

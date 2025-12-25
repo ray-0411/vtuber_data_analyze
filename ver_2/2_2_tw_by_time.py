@@ -12,9 +12,12 @@ def main():
     if not SRC_DB.exists():
         raise FileNotFoundError("找不到 data_2_2.db")
 
-    if not DST_DB.exists():
-        shutil.copyfile(SRC_DB, DST_DB)
-        print("✅ 建立 data_2_2.db（from data_2_1）")
+    if DST_DB.exists():
+        DST_DB.unlink()
+        print(f"⚠️ 已刪除舊的 {DST_DB.name}")
+
+    shutil.copyfile(SRC_DB, DST_DB)
+    print("✅ 建立 data_2_2.db")
 
     conn = sqlite3.connect(DST_DB)
     cur = conn.cursor()

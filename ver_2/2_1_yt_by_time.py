@@ -6,7 +6,7 @@ TOP_PATH = Path(__file__).resolve().parent
 VER2_PATH = TOP_PATH
 VER1_PATH = TOP_PATH.parent / "ver_1"
 
-SRC_DB = VER2_PATH / "data_2_0.db"   # 來源：已有 channel_avg
+SRC_DB = VER1_PATH / "data_1_5.db"   # 來源：已有 channel_avg
 DST_DB = VER2_PATH / "data_2_1.db"   # 輸出：2.1 結果
 
 def main():

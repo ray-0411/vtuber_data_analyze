@@ -22,43 +22,46 @@ def main():
     conn = sqlite3.connect(DST_DB)
     cur = conn.cursor()
 
-    # ─────────────────────────────
-    # 刪除 YT：±3σ
-    # ─────────────────────────────
-    print("🧹 刪除 YT 超過 ±3σ 的資料")
+
+
+    print("🧹 刪除 YT 超過 ±2.5σ（ln）的資料")
 
     cur.execute("""
         DELETE FROM main
         WHERE id IN (
-            SELECT m.id
+            SELECT
+                m.id
             FROM main m
             JOIN channel_avg c
                 ON c.channel_id = m.channel
             WHERE
-                m.youtube IS NOT NULL
-                AND c.yt_std > 0
-                AND ABS(m.youtube - c.yt_avg) > 3 * c.yt_std
+                m.youtube > 0
+                AND c.yt_ln_std > 0
+                AND ABS(
+                    (ln(m.youtube) - c.yt_ln_avg) / c.yt_ln_std
+                ) > 2.5
         );
     """)
 
     print(f"   → 影響筆數（YT）：{cur.rowcount}")
 
-    # ─────────────────────────────
-    # 刪除 TW：±4.5σ
-    # ─────────────────────────────
-    print("🧹 刪除 TW 超過 ±4.5σ 的資料")
+
+    print("🧹 刪除 TW 超過 ±2.5σ（ln）的資料")
 
     cur.execute("""
         DELETE FROM main
         WHERE id IN (
-            SELECT m.id
+            SELECT
+                m.id
             FROM main m
             JOIN channel_avg c
                 ON c.channel_id = m.channel
             WHERE
-                m.twitch IS NOT NULL
-                AND c.tw_std > 0
-                AND ABS(m.twitch - c.tw_avg) > 4.5 * c.tw_std
+                m.twitch > 0
+                AND c.tw_ln_std > 0
+                AND ABS(
+                    (ln(m.twitch) - c.tw_ln_avg) / c.tw_ln_std
+                ) > 2.5
         );
     """)
 
