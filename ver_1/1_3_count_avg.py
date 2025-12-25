@@ -3,10 +3,9 @@ import shutil
 from pathlib import Path
 
 TOP_PATH = Path(__file__).resolve().parent
-VER1_PATH = TOP_PATH.parent / "ver_1"
 
-SRC_DB = VER1_PATH / "data_1_2.db"
-DST_DB = TOP_PATH / "data_2_0.db"
+SRC_DB = TOP_PATH / "data_1_2.db"
+DST_DB = TOP_PATH / "data_1_3.db"
 
 
 def main():
