@@ -51,6 +51,7 @@ def main():
     
     print("✅ 時間離散化完成")
     
+    # 2️⃣ 建立 index 加速後續運算
     print("⚙️ 建立 index（YouTube / Twitch）")
 
     cur.execute("""
@@ -65,50 +66,86 @@ def main():
 
     conn.commit()
     print("✅ index 建立完成")
-    
+
     cur.execute("ANALYZE;")
     conn.commit()
     print("📊 ANALYZE 完成")
 
-    
-    print("📊 開始計算 YouTube 平均（一次 UPDATE）")
+
+    # =========================
+    # YouTube 平均（穩定版）
+    # =========================
+    print("📊 開始計算 YouTube 平均（穩定版）")
+
+    cur.execute("""
+    DROP TABLE IF EXISTS tmp_yt_avg;
+    """)
+
+    cur.execute("""
+    CREATE TEMP TABLE tmp_yt_avg AS
+    SELECT
+        date,
+        time,
+        yt_number,
+        CAST(AVG(youtube) AS INTEGER) AS avg_youtube
+    FROM "main"
+    WHERE yt_number != 0
+    GROUP BY date, time, yt_number;
+    """)
 
     cur.execute("""
     UPDATE "main"
     SET youtube = (
-        SELECT CAST(AVG(youtube) AS INTEGER)
-        FROM "main" m2
+        SELECT avg_youtube
+        FROM tmp_yt_avg t
         WHERE
-            m2.date = "main".date
-            AND m2.time = "main".time
-            AND m2.yt_number = "main".yt_number
+            t.date = "main".date
+            AND t.time = "main".time
+            AND t.yt_number = "main".yt_number
     )
     WHERE yt_number != 0;
     """)
 
     conn.commit()
-    print("✅ YouTube 平均完成")
+    print("✅ YouTube 平均完成（保證一致）")
 
 
-    print("📊 開始計算 Twitch 平均（一次 UPDATE）")
+    # =========================
+    # Twitch 平均（穩定版）
+    # =========================
+    print("📊 開始計算 Twitch 平均（穩定版）")
+
+    cur.execute("""
+    DROP TABLE IF EXISTS tmp_tw_avg;
+    """)
+
+    cur.execute("""
+    CREATE TEMP TABLE tmp_tw_avg AS
+    SELECT
+        date,
+        time,
+        tw_number,
+        CAST(AVG(twitch) AS INTEGER) AS avg_twitch
+    FROM "main"
+    WHERE tw_number != 0
+    GROUP BY date, time, tw_number;
+    """)
 
     cur.execute("""
     UPDATE "main"
     SET twitch = (
-        SELECT CAST(AVG(twitch) AS INTEGER)
-        FROM "main" m2
+        SELECT avg_twitch
+        FROM tmp_tw_avg t
         WHERE
-            m2.date = "main".date
-            AND m2.time = "main".time
-            AND m2.tw_number = "main".tw_number
+            t.date = "main".date
+            AND t.time = "main".time
+            AND t.tw_number = "main".tw_number
     )
     WHERE tw_number != 0;
     """)
 
     conn.commit()
-    print("✅ Twitch 平均完成")
-    
-    
+    print("✅ Twitch 平均完成（保證一致）")
 
     conn.close()
     print("✅ 15 分鐘重取樣完成")
