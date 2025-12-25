@@ -27,25 +27,58 @@ def main():
         channel_id   TEXT PRIMARY KEY,
         channel_name TEXT,
         yt_avg REAL,
-        tw_avg REAL
+        yt_std REAL,
+        tw_avg REAL,
+        tw_std REAL
     );
     """)
 
     print("📊 建立 channel_avg（以 streamer 順序）")
 
     cur.execute("""
-    INSERT INTO channel_avg (channel_id, channel_name, yt_avg, tw_avg)
+    INSERT INTO channel_avg (channel_id, channel_name, yt_avg, yt_std, tw_avg, tw_std)
     SELECT
         s.channel_id,
         s.channel_name,
+
+        -- YT 平均
         COALESCE(
-        ROUND(AVG(CASE WHEN m.yt_number != 0 THEN m.youtube END), 1),
+            ROUND(AVG(CASE WHEN m.yt_number != 0 THEN m.youtube END), 1),
             0
         ) AS yt_avg,
+
+        -- YT 標準差
+        COALESCE(
+            ROUND(
+                sqrt(
+                    AVG(CASE WHEN m.yt_number != 0 THEN m.youtube * m.youtube END)
+                - AVG(CASE WHEN m.yt_number != 0 THEN m.youtube END)
+                    * AVG(CASE WHEN m.yt_number != 0 THEN m.youtube END)
+                ),
+                1
+            ),
+            0
+        ) AS yt_std,
+
+        -- TW 平均
         COALESCE(
             ROUND(AVG(CASE WHEN m.tw_number != 0 THEN m.twitch END), 1),
             0
-        ) AS tw_avg
+        ) AS tw_avg,
+
+        -- TW 標準差
+        COALESCE(
+            ROUND(
+                sqrt(
+                    AVG(CASE WHEN m.tw_number != 0 THEN m.twitch * m.twitch END)
+                - AVG(CASE WHEN m.tw_number != 0 THEN m.twitch END)
+                    * AVG(CASE WHEN m.tw_number != 0 THEN m.twitch END)
+                ),
+                1
+            ),
+            0
+        ) AS tw_std
+
     FROM streamer s
     LEFT JOIN main m
         ON m.channel = s.channel_id
@@ -57,7 +90,7 @@ def main():
     print("✅ channel_avg 建立完成（順序與 streamer 一致）")
 
     conn.close()
-    print("\n🎉 data_2_0 完成（已對應 streamer）")
+    print("\n🎉 data_1_3 完成（已對應 streamer）")
 
 
 if __name__ == "__main__":
