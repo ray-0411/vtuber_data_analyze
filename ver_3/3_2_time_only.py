@@ -79,10 +79,14 @@ def main():
         COALESCE(ROUND(AVG(m.youtube), 1), 0) AS avg_viewers,
 
         CASE
-            WHEN c.yt_avg = 0 THEN 0
+            WHEN c.yt_avg <= 0 THEN 0
+            WHEN AVG(m.youtube) <= 0 THEN 0
             ELSE ROUND(
-                (COALESCE(AVG(m.youtube), 0) - c.yt_avg)
-                / c.yt_avg * 100,
+                (
+                    exp(
+                        AVG(ln(m.youtube)) - c.yt_log_geo_avg
+                    ) - 1
+                ) * 100,
                 2
             )
         END AS diff_percent
@@ -115,10 +119,14 @@ def main():
         COALESCE(ROUND(AVG(m.twitch), 1), 0) AS avg_viewers,
 
         CASE
-            WHEN c.tw_avg = 0 THEN 0
+            WHEN c.tw_avg <= 0 THEN 0
+            WHEN AVG(m.twitch) <= 0 THEN 0
             ELSE ROUND(
-                (COALESCE(AVG(m.twitch), 0) - c.tw_avg)
-                / c.tw_avg * 100,
+                (
+                    exp(
+                        AVG(ln(m.twitch)) - c.tw_log_geo_avg
+                    ) - 1
+                ) * 100,
                 2
             )
         END AS diff_percent
@@ -127,8 +135,8 @@ def main():
     CROSS JOIN time_slots t
     LEFT JOIN main m
         ON m.channel = c.channel_id
-       AND m.time = t.time
-       AND m.tw_number != 0
+        AND m.time = t.time
+        AND m.tw_number != 0
     WHERE c.tw_avg <> 0
     GROUP BY c.channel_id, c.channel_name, t.time
     ORDER BY c.channel_id, t.time;
@@ -145,7 +153,11 @@ WITH yt AS (
         time,
         SUM(live_count) AS yt_sum,
         SUM(avg_viewers * live_count) AS yt_avg_wsum,
-        SUM(diff_percent * live_count) AS yt_diff_wsum
+
+        -- 🔑 即時還原 diff_log
+        SUM(
+            ln(1 + diff_percent / 100.0) * live_count
+        ) AS yt_diff_log_wsum
     FROM yt_time_profile
     GROUP BY time
 ),
@@ -154,7 +166,9 @@ tw AS (
         time,
         SUM(live_count) AS tw_sum,
         SUM(avg_viewers * live_count) AS tw_avg_wsum,
-        SUM(diff_percent * live_count) AS tw_diff_wsum
+        SUM(
+            ln(1 + diff_percent / 100.0) * live_count
+        ) AS tw_diff_log_wsum
     FROM tw_time_profile
     GROUP BY time
 ),
@@ -180,7 +194,9 @@ SELECT
     ROUND(
         CASE
             WHEN yt.yt_sum > 0
-            THEN yt.yt_diff_wsum / yt.yt_sum
+            THEN (
+                exp(yt.yt_diff_log_wsum * 1.0 / yt.yt_sum) - 1
+            ) * 100
             ELSE NULL
         END
     , 2) AS yt_weighted_diff,
@@ -199,7 +215,9 @@ SELECT
     ROUND(
         CASE
             WHEN tw.tw_sum > 0
-            THEN tw.tw_diff_wsum / tw.tw_sum
+            THEN (
+                exp(tw.tw_diff_log_wsum * 1.0 / tw.tw_sum) - 1
+            ) * 100
             ELSE NULL
         END
     , 2) AS tw_weighted_diff
@@ -208,6 +226,7 @@ FROM all_time a
 LEFT JOIN yt ON yt.time = a.time
 LEFT JOIN tw ON tw.time = a.time
 ORDER BY a.time;
+
 
     """)
     
